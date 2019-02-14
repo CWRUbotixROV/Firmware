@@ -6,14 +6,25 @@ import random
 
 
 class SettableText(Text):
+    """Extends the tkinter Text object to allow the text to be changed."""
+
     def set_text(self, newtext):
+        """Set the text in the text object to the new text.
+
+        :param str newtext: the text to set the Text object to hold
+
+        """
+        # remove all the old text
         self.delete(1.0, END)
+
+        # add the new text
         self.insert(END, newtext)
 
 class SSH(SSHClient):
     """Class to represent an SSH connection to the Raspberry Pi."""
 
     def __init__(self):
+        """Create a new SSH object."""
         # don't really need security for this SSH connection since its over local
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -84,7 +95,6 @@ class ThrusterControl():
 
 class ControlWindow():
     """Class to represent store all info for the GUI used to control the robot."""
-
     LEFT_THRUSTER_KEY = 'a'
     RIGHT_THRUSTER_KEY = 'd'
     TEMP_SENSOR_KEY = 't'
@@ -107,8 +117,8 @@ class ControlWindow():
         self.master.mainloop()
 
     def _add_instructions(self):
+        """Adds the instruction text box to the GUI."""
         instructions = Text(self.master, height=7, width=40)
-        #instructions.pack()
 
         instructions.insert(END, 'Baby ROV Control:\n'
                                  'Press <{}> to power the left thruster\n'
@@ -121,10 +131,12 @@ class ControlWindow():
                                            self.TEMP_SENSOR_KEY,
                                            self.PH_SENSOR_KEY))
 
+        # place the instruction at the top of the GUI window
         instructions.grid(row=0, column=0, columnspan=2)
         instructions.grid()
 
     def _setup_thrusters(self):
+        """Adds the thruster info boxes to the GUI."""
         # create text box for left thruster on left under the instructions
         self.left_thruster_state = SettableText(self.master, height=1, width=20)
         self.left_thruster_state.grid(row=1, column=0)
@@ -140,6 +152,7 @@ class ControlWindow():
         self.right_thruster = ThrusterControl('Right', None, self.right_thruster_state)
 
     def _setup_sensors(self):
+        """Adds the pH and temperature info boxes to the GUI."""
         # create the text box for pH reading under the left thruster
         self.ph_reading = SettableText(self.master, height=2, width=20)
         self.ph_reading.grid(row=2, column=0)
@@ -151,6 +164,7 @@ class ControlWindow():
         self.temp_reading.set_text(self.TEMP_TEXT.format(READING='N/A'))
 
     def _bind_keys(self):
+        """Bind the keys for the peripherals (ie thrusters, sensors, etc)."""
         # bind the right thruster key to turn it on and off
         self.master.bind('<KeyPress-{}>'.format(self.RIGHT_THRUSTER_KEY),
                          self.right_thruster.thruster_on)
@@ -172,6 +186,11 @@ class ControlWindow():
                          self.read_ph_sensor)
 
     def read_temp_sensor(self, event=None):
+        """Sends the SSH command to read the temperature sensor and updates its info box.
+
+        :param obj event: obj with the event information that called this function
+
+        """
         # send the read command
         #reading = self.ssh.exec_and_print('echo \'TODO: read the temp sensor\'')
         reading = random.randint(1, 14)
@@ -180,6 +199,11 @@ class ControlWindow():
         self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
 
     def read_ph_sensor(self, event=None):
+        """Sends the SSH command to read the pH sensor and updates its info box.
+
+        :param obj event: obj with the event information that called this function
+
+        """
         # send the read command
         #reading = self.ssh.exec_and_print('echo \'TODO: read the pH sensor\'')
         reading = random.randint(0, 100)
