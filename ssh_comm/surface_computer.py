@@ -173,7 +173,7 @@ class ControlWindow():
 
         """
         # send the read command
-        reading = self.ssh.exec_and_print('python temp_reading.py')
+        reading = self.ssh.exec_and_print('python ~/temp_reading.py')
         #reading = random.randint(1, 14)
 
         # update the GUI text box
