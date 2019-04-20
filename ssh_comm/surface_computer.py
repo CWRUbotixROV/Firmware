@@ -41,7 +41,7 @@ class ThrusterControl():
         self.ssh = ssh
 
     def thruster_forward(self, event=None):
-        """Sends the command to turn on the thruster and updates the GUI.
+        """Sends the command to move forward and updates the GUI.
 
         Note that the thruster on command is only sent if the thruster is not already on.
 
@@ -53,12 +53,19 @@ class ThrusterControl():
             self.forward = True
 
     def thruster_backward(self, event=None):
+        """Sends the command to move backward and updates the GUI.
+
+        Note that the thruster on command is only sent if the thruster is not already on.
+
+        :param obj event: obj with the event information that called this function
+
+        """
         if not self.forward and not self.backward:
             self.text_output.set_text('Thruster Backward')
             self.backward = True
 
     def thruster_forward_off(self, event=None):
-        """Sends the command to turn off the thruster and updates the GUI.
+        """Sends the command to the thruster to stop going forward and updates the GUI.
 
         :param obj event: obj with the event information that called this function
 
@@ -74,6 +81,11 @@ class ThrusterControl():
 
 
     def thruster_backward_off(self, event=None):
+        """Sends the command to the thruster to stop going backward and updates the GUI.
+
+        :param obj event: obj with the event information that called this function
+
+        """
         self.backward = False
 
         if not self.forward:
@@ -88,8 +100,35 @@ class ControlWindow():
     TEMP_SENSOR_KEY = 't'
     PH_SENSOR_KEY = 'p'
 
-    TEMP_TEXT = "Last Temperature\nReading: {READING}"
-    PH_TEXT = "Last pH Reading: \n{READING}"
+    TEMP_TEXT = 'Last Temperature\nReading: {READING}'
+    PH_TEXT = 'Last pH Reading: \n{READING}'
+    READ_PENDING = 'Reading...'
+    NO_READING = 'N/A'
+
+
+
+    # Widths
+    WINDOW_WIDTH      = 40
+    HALF_WINDOW_WIDTH = 20
+
+    # Heights
+    THRUSTER_STATUS_HEIGHT = 1
+    SENSOR_READING_HEIGHT  = 2
+    TOTAL_WINDOW_HEIGHT    = 7
+
+    # Rows
+    NUM_ROWS         = 2
+    INSTRUCTIONS_ROW = 0
+    THRUSTERS_ROW    = 1
+    SENSOR_ROW       = 2
+
+    # Columns
+    NUM_COLUMNS      = 2
+    INSTRUCTIONS_COL = 0
+    THRUSTERS_COL    = 0
+    TEMP_SENSOR_COL  = 0
+    PH_SENSOR_COL    = 1
+
 
     def __init__(self):
         self.ssh = SSH(SSH.COMPANION)
@@ -106,7 +145,7 @@ class ControlWindow():
 
     def _add_instructions(self):
         """Adds the instruction text box to the GUI."""
-        instructions = Text(self.master, height=7, width=40)
+        instructions = Text(self.master, height=self.TOTAL_WINDOW_HEIGHT, width=self.WINDOW_WIDTH)
 
         instructions.insert(END, 'Baby ROV Control:\n'
                                  'Press <{}> to move forward\n'
@@ -120,14 +159,18 @@ class ControlWindow():
                                            self.PH_SENSOR_KEY))
 
         # place the instruction at the top of the GUI window
-        instructions.grid(row=0, column=0, columnspan=2)
+        instructions.grid(row=self.INSTRUCTIONS_ROW,
+                          column=self.INSTRUCTIONS_COL,
+                          columnspan=self.NUM_COLUMNS)
         instructions.grid()
 
     def _setup_thrusters(self):
         """Adds the thruster info boxes to the GUI."""
         # create text box for left thruster on left under the instructions
-        self.thruster_state = SettableText(self.master, height=1, width=40)
-        self.thruster_state.grid(row=1, column=0,  columnspan=2)
+        self.thruster_state = SettableText(self.master,
+                                           height=self.THRUSTER_STATUS_HEIGHT,
+                                           width=self.WINDOW_WIDTH)
+        self.thruster_state.grid(row=self.THRUSTERS_ROW, column=self.THRUSTERS_COL,  columnspan=self.NUM_COLUMNS)
 
         # create control object for left thruster
         self.thruster = ThrusterControl(None, self.thruster_state)
@@ -135,14 +178,18 @@ class ControlWindow():
     def _setup_sensors(self):
         """Adds the pH and temperature info boxes to the GUI."""
         # create the text box for pH reading under the left thruster
-        self.ph_reading = SettableText(self.master, height=2, width=20)
-        self.ph_reading.grid(row=2, column=0)
-        self.ph_reading.set_text(self.PH_TEXT.format(READING='N/A'))
+        self.ph_reading = SettableText(self.master,
+                                       height=self.SENSOR_READING_HEIGHT,
+                                       width=self.HALF_WINDOW_WIDTH)
+        self.ph_reading.grid(row=self.SENSOR_ROW, column=self.PH_SENSOR_COL)
+        self.ph_reading.set_text(self.PH_TEXT.format(READING=self.NO_READING))
 
         # create the text box for temperature reading under the right thruster
-        self.temp_reading = SettableText(self.master, height=2, width=20)
-        self.temp_reading.grid(row=2, column=1)
-        self.temp_reading.set_text(self.TEMP_TEXT.format(READING='N/A'))
+        self.temp_reading = SettableText(self.master,
+                                         height=self.SENSOR_READING_HEIGHT,
+                                         width=self.HALF_WINDOW_WIDTH)
+        self.temp_reading.grid(row=self.SENSOR_ROW, column=self.TEMP_SENSOR_COL)
+        self.temp_reading.set_text(self.TEMP_TEXT.format(READING=self.NO_READING))
 
     def _bind_keys(self):
         """Bind the keys for the peripherals (ie thrusters, sensors, etc)."""
@@ -172,9 +219,11 @@ class ControlWindow():
         :param obj event: obj with the event information that called this function
 
         """
+        # change the text box to indicate that the temperature is being read
+        self.temp_reading.set_text(self.TEMP_TEXT.format(READING=self.READ_PENDING))
+
         # send the read command
         reading = self.ssh.exec_and_print('python temp_reading.py')
-        #reading = random.randint(1, 14)
 
         # update the GUI text box
         self.temp_reading.set_text(self.TEMP_TEXT.format(READING=reading))
@@ -185,9 +234,11 @@ class ControlWindow():
         :param obj event: obj with the event information that called this function
 
         """
+        # change the text box to indicate that the pH is being read
+        self.ph_reading.set_text(self.PH_TEXT.format(READING=self.READ_PENDING))
+
         # send the read command
         reading = self.ssh.exec_and_print('python ph_reading.py')
-        #reading = random.randint(0, 100)
 
         # update the GUI text box
         self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
