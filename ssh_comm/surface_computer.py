@@ -92,7 +92,7 @@ class ControlWindow():
     PH_TEXT = "Last pH Reading: \n{READING}"
 
     def __init__(self):
-        self.ssh = SSH()
+        self.ssh = SSH(SSH.COMPANION)
 
         self.master = Tk()
 
@@ -177,7 +177,7 @@ class ControlWindow():
         #reading = random.randint(1, 14)
 
         # update the GUI text box
-        self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
+        self.temp_reading.set_text(self.TEMP_TEXT.format(READING=reading))
 
     def read_ph_sensor(self, event=None):
         """Sends the SSH command to read the pH sensor and updates its info box.
@@ -190,7 +190,7 @@ class ControlWindow():
         #reading = random.randint(0, 100)
 
         # update the GUI text box
-        self.temp_reading.set_text(self.TEMP_TEXT.format(READING=reading))
+        self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
 
 if __name__ == "__main__":
     x = ControlWindow()
