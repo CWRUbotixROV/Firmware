@@ -20,9 +20,9 @@ class SSH(SSHClient):
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         # make the connection
-        if sock is None:
+        if sock is None:    # use default if no socket was provided
             self.connect(config.ip, username=config.user, password=config.password)
-        else:
+        else:               # Use the socket provided via the constructor
             self.connect(config.ip, username=config.user, password=config.password, sock=sock)
 
     def exec_and_print(self, cmd):
