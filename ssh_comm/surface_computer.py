@@ -94,6 +94,14 @@ class ControlWindow():
     def __init__(self):
         self.ssh = SSH(SSH.COMPANION)
 
+        transport = self.ssh.get_transport()
+        pizero_addr = ('192.168.3.2', 22)   # the address and port of the Pi Zero, as seen by the Pi 3
+        pi3_addr = ('192.168.2.2', 22)      # the address and port of the Pi 3, as seen by the surface computer
+        channel = transport.open_channel('direct-tcpip', pizero_addr, pi3_addr)
+
+        pizero = SSH(pizero_addr[0], 'pi', 'raspberry', sock=channel)
+        pizero.exec_and_print('ls')
+
         self.master = Tk()
 
         self._add_instructions()
