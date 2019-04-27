@@ -1,7 +1,10 @@
 from tkinter import * #imports everything from the tkinter library
 import time
 import random
+import serial
 from ssh import SSH
+
+"""See documentation/Surface_Computer.md for more information on this script"""
 
 
 class SettableText(Text):
@@ -99,13 +102,18 @@ class ControlWindow():
     THRUSTER_FORWARD_KEY = 'w'
     TEMP_SENSOR_KEY = 't'
     PH_SENSOR_KEY = 'p'
+    SMART_HOOK_ACTUATOR = 'a'
+    JUMBO_HOOK_ACTUATOR = 'd'
 
+    NO_CONNECTION = 'No Connection: \n{READING}'
     TEMP_TEXT = 'Last Temperature\nReading: {READING}'
     PH_TEXT = 'Last pH Reading: \n{READING}'
+    SMART_TEXT = 'Smart hook state: \n{READING}'
+    JUMBO_TEXT = 'Jumbo hook state: \n{READING}'
     READ_PENDING = 'Reading...'
     NO_READING = 'N/A'
-
-
+    HOOK_ON = 'On'
+    HOOK_OFF = 'Off'
 
     # Widths
     WINDOW_WIDTH      = 40
@@ -114,13 +122,15 @@ class ControlWindow():
     # Heights
     THRUSTER_STATUS_HEIGHT = 1
     SENSOR_READING_HEIGHT  = 2
-    TOTAL_WINDOW_HEIGHT    = 7
+    HOOK_STATUS_HEIGHT     = 2
+    TOTAL_WINDOW_HEIGHT    = 12
 
     # Rows
-    NUM_ROWS         = 2
+    NUM_ROWS         = 3
     INSTRUCTIONS_ROW = 0
     THRUSTERS_ROW    = 1
     SENSOR_ROW       = 2
+    HOOK_ROW         = 3
 
     # Columns
     NUM_COLUMNS      = 2
@@ -128,22 +138,50 @@ class ControlWindow():
     THRUSTERS_COL    = 0
     TEMP_SENSOR_COL  = 0
     PH_SENSOR_COL    = 1
+    SMART_HOOK_COL   = 0
+    JUMBO_HOOK_COL   = 1
 
 
     def __init__(self):
-        self.ssh = SSH(SSH.COMPANION)
+        # attempt to connect to the Companion computer.
+        try:
+            self.ssh = SSH(SSH.COMPANION)
+        # if no connection can be made, make a note of that on the GUI
+        except:
+            self.TEMP_TEXT = self.NO_CONNECTION
+            self.PH_TEXT = self.NO_CONNECTION
+            self.ssh = None
 
-        transport = self.ssh.get_transport()
-        zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
-        companion_addr = (SSH.COMPANION, 22)      # the address and port of the Pi 3, as seen by the surface computer
-        channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
-        self.zero_ssh = SSH(SSH.ZERO, sock=channel)
+        # attempt to connect to the Pi Zero
+        try:
+            transport = self.ssh.get_transport()
+            zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
+            companion_addr = (SSH.COMPANION, 22)      # the address and port of the Pi 3, as seen by the surface computer
+            channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
+            self.zero_ssh = SSH(SSH.ZERO, sock=channel)
+        # if no connection can be made, print to the console no connection was made
+        except:
+            print('No connection to thruster')
+            self.zero_ssh=None
+
+        # attempt to connect to the arduino serial port
+        try:
+            self.serial_conn = serial.Serial('COM13', 9600) # change this COM port with whatever comes up when plugged in
+        # if no connection can be made, update the GUI to reflect that
+        except:
+            self.SMART_TEXT = self.NO_CONNECTION
+            self.JUMBO_TEXT = self.NO_CONNECTION
+            self.serial_conn = None
+
+        self.smart_hook_state = self.HOOK_OFF
+        self.jumbo_hook_state = self.HOOK_OFF
 
         self.master = Tk()
 
         self._add_instructions()
         self._setup_thrusters()
         self._setup_sensors()
+        self._setup_hooks()
 
         self._bind_keys()
 
@@ -159,10 +197,14 @@ class ControlWindow():
                                  '\nSensor Readings\n'
                                  'Press <{}> to get a temperature reading\n'
                                  'Press <{}> to get a pH reading.\n'
+                                 'Press <{}> to toggle the smart hook actuator\n'
+                                 'Press <{}> to toggle the jumbo hook actuator\n'
                                  ''.format(self.THRUSTER_FORWARD_KEY,
                                            self.THRUSTER_BACKWARD_KEY,
                                            self.TEMP_SENSOR_KEY,
-                                           self.PH_SENSOR_KEY))
+                                           self.PH_SENSOR_KEY,
+                                           self.SMART_HOOK_ACTUATOR,
+                                           self.JUMBO_HOOK_ACTUATOR))
 
         # place the instruction at the top of the GUI window
         instructions.grid(row=self.INSTRUCTIONS_ROW,
@@ -197,6 +239,22 @@ class ControlWindow():
         self.temp_reading.grid(row=self.SENSOR_ROW, column=self.TEMP_SENSOR_COL)
         self.temp_reading.set_text(self.TEMP_TEXT.format(READING=self.NO_READING))
 
+    def _setup_hooks(self):
+        """Adds the hook status boxes to the GUI."""
+        # create the text box for pH reading under the left thruster
+        self.smart_hook = SettableText(self.master,
+                                       height=self.HOOK_STATUS_HEIGHT,
+                                       width=self.HALF_WINDOW_WIDTH)
+        self.smart_hook.grid(row=self.HOOK_ROW, column=self.SMART_HOOK_COL)
+        self.smart_hook.set_text(self.SMART_TEXT.format(READING=self.HOOK_OFF))
+
+        # create the text box for temperature reading under the right thruster
+        self.jumbo_hook = SettableText(self.master,
+                                         height=self.HOOK_STATUS_HEIGHT,
+                                         width=self.HALF_WINDOW_WIDTH)
+        self.jumbo_hook.grid(row=self.HOOK_ROW, column=self.JUMBO_HOOK_COL)
+        self.jumbo_hook.set_text(self.JUMBO_TEXT.format(READING=self.HOOK_OFF))
+
     def _bind_keys(self):
         """Bind the keys for the peripherals (ie thrusters, sensors, etc)."""
         # bind the right thruster key to turn it on and off
@@ -218,6 +276,14 @@ class ControlWindow():
         # bind the pH sensor key
         self.master.bind('<KeyPress-{}>'.format(self.PH_SENSOR_KEY),
                          self.read_ph_sensor)
+
+        # bind smart hook actuator
+        self.master.bind('<KeyPress-{}>'.format(self.SMART_HOOK_ACTUATOR),
+                         self.toggle_smart_hook)
+
+        # bind jumbo hook actuator
+        self.master.bind('<KeyPress-{}>'.format(self.JUMBO_HOOK_ACTUATOR),
+                         self.toggle_jumbo_hook)
 
     def read_temp_sensor(self, event=None):
         """Sends the SSH command to read the temperature sensor and updates its info box.
@@ -249,6 +315,42 @@ class ControlWindow():
 
         # update the GUI text box
         self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
+
+    def toggle_smart_hook(self, event=None):
+        """Sends the serial command to toggle the smart hook and update its status box.
+
+        :param obj event: obj with the event information that called this function
+
+        """
+        # send the command to toggle the smart hook
+        self.serial_conn.write(bytes(self.SMART_HOOK_ACTUATOR, 'utf-8'))
+
+        # toggle the GUI state
+        if (self.smart_hook_state is self.HOOK_ON):
+            self.smart_hook_state = self.HOOK_OFF
+        else:
+            self.smart_hook_state = self.HOOK_ON
+
+        # reflect the new state on the GUI
+        self.smart_hook.set_text(self.SMART_TEXT.format(READING=self.smart_hook_state))
+
+    def toggle_jumbo_hook(self, event=None):
+        """Sends the serial command to toggle the jumbo hook and update its status box.
+
+        :param obj event: obj with the event information that called this function
+
+        """
+        # send the command to toggle the jumbo hook
+        self.serial_conn.write(bytes(self.JUMBO_HOOK_ACTUATOR, 'utf-8'))
+
+        # toggle the GUI state
+        if (self.jumbo_hook_state is self.HOOK_ON):
+            self.jumbo_hook_state = self.HOOK_OFF
+        else:
+            self.jumbo_hook_state = self.HOOK_ON
+
+        # reflect the new state on the GUI
+        self.jumbo_hook.set_text(self.JUMBO_TEXT.format(READING=self.jumbo_hook_state))
 
 if __name__ == "__main__":
     x = ControlWindow()
