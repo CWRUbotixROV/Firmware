@@ -15,7 +15,7 @@ class SSH(SSHClient):
 
     def __init__(self, config):
         """Create a new SSH object."""
-        super()
+        super(SSH, self).__init__()
         # don't really need security for this SSH connection since its over local
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
