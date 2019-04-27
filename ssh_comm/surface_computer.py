@@ -216,7 +216,7 @@ class ControlWindow():
     def read_temp_sensor(self, event=None):
         """Sends the SSH command to read the temperature sensor and updates its info box.
 
-        :param obj event: obj with the event information that called this function
+        : param obj event: obj with the event information that called this function
 
         """
         # change the text box to indicate that the temperature is being read
