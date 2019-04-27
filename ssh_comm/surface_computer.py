@@ -133,6 +133,12 @@ class ControlWindow():
     def __init__(self):
         self.ssh = SSH(SSH.COMPANION)
 
+        transport = self.ssh.get_transport()
+        zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
+        companion_addr = (SSH.COMPANION, 22)      # the address and port of the Pi 3, as seen by the surface computer
+        channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
+        self.zero_ssh = SSH(SSH.ZERO, sock=channel)
+
         self.master = Tk()
 
         self._add_instructions()

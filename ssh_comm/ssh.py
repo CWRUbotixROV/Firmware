@@ -13,14 +13,17 @@ class SSH(SSHClient):
     COMPANION = SSH_Config('192.168.2.2', 'pi', 'companion')
     ZERO      = SSH_Config('192.168.3.2', 'pi', 'raspberry')
 
-    def __init__(self, config):
+    def __init__(self, config, sock=None):
         """Create a new SSH object."""
         super(SSH, self).__init__()
         # don't really need security for this SSH connection since its over local
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         # make the connection
-        self.connect(config.ip, username=config.user, password=config.password)
+        if sock is None:    # use default if no socket was provided
+            self.connect(config.ip, username=config.user, password=config.password)
+        else:               # Use the socket provided via the constructor
+            self.connect(config.ip, username=config.user, password=config.password, sock=sock)
 
     def exec_and_print(self, cmd):
         """Sends the command over the SSH connection and print the output to the console.
