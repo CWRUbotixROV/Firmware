@@ -26,6 +26,12 @@ class SettableText(Text):
 class ThrusterControl():
     """Class to represent and configure a thruster on the BabyROV."""
 
+    NO_CONNECTION = 'No Connection'
+    DESC = 'Thruster'
+    FORWARD = '{DESC}: Forward'
+    BACKWARD = '{DESC}: Backward'
+    OFF = '{DESC}: Off'
+
     def __init__(self, ssh, text_output):
         """Create a new ThrusterControl object
 
@@ -43,6 +49,9 @@ class ThrusterControl():
 
         self.ssh = ssh
 
+        if self.ssh is None:
+            self.DESC = self.NO_CONNECTION
+
     def thruster_forward(self, event=None):
         """Sends the command to move forward and updates the GUI.
 
@@ -52,7 +61,7 @@ class ThrusterControl():
 
         """
         if not self.forward and not self.backward:
-            self.text_output.set_text('Thruster Forward')
+            self.text_output.set_text(self.FORWARD.format(DESC=self.DESC))
             self.forward = True
 
     def thruster_backward(self, event=None):
@@ -64,7 +73,7 @@ class ThrusterControl():
 
         """
         if not self.forward and not self.backward:
-            self.text_output.set_text('Thruster Backward')
+            self.text_output.set_text(self.BACKWARD.format(DESC=self.DESC))
             self.backward = True
 
     def thruster_forward_off(self, event=None):
@@ -78,7 +87,7 @@ class ThrusterControl():
         self.forward = False
 
         if not self.backward:
-            self.text_output.set_text('Thruster Off')
+            self.text_output.set_text(self.OFF.format(DESC=self.DESC))
         else:
             self.thruster_backward()
 
@@ -92,7 +101,7 @@ class ThrusterControl():
         self.backward = False
 
         if not self.forward:
-            self.text_output.set_text('Thruster Off')
+            self.text_output.set_text(self.OFF.format(DESC=self.DESC))
         else:
             self.thruster_forward()
 
