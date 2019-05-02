@@ -3,6 +3,7 @@ import time
 import random
 from ssh import SSH
 from marker_dropper import MarkerDropper
+from functools import partial
 
 class SettableText(Text):
     """Extends the tkinter Text object to allow the text to be changed."""
@@ -93,7 +94,7 @@ class ControlWindow():
     TEMP_TEXT = "Last Temperature\nReading: {READING}"
     PH_TEXT = "Last pH Reading: \n{READING}"
 
-    def __init__(self, use_zero=False, red_markers=[], black_markers=[]):
+    def __init__(self, use_zero=False, red=[1, 3, 5], black=[2, 4, 6]):
         self.ssh = SSH(SSH.COMPANION)
 
         transport = self.ssh.get_transport()
@@ -103,7 +104,11 @@ class ControlWindow():
             channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
             self.zero_ssh = SSH(SSH.ZERO, sock=channel)
 
+        self.ssh.exec_and_print('sudo pigpiod')  # pigpio daemon needs to be started manually for now
+
         self.master = Tk()
+        
+        self.markerdropper = MarkerDropper(270, 40, red_markers=red, black_markers=black, pin=20)
 
         self._add_instructions()
         self._setup_thrusters()
@@ -115,7 +120,7 @@ class ControlWindow():
 
     def _add_instructions(self):
         """Adds the instruction text box to the GUI."""
-        instructions = Text(self.master, height=7, width=40)
+        instructions = Text(self.master, height=14, width=40)
 
         instructions.insert(END, 'Baby ROV Control:\n'
                                  'Press <{}> to move forward\n'
@@ -178,6 +183,10 @@ class ControlWindow():
         # bind the pH sensor key
         self.master.bind('<KeyPress-{}>'.format(self.PH_SENSOR_KEY),
                          self.read_ph_sensor)
+        
+        # bind the keys to drop red and black markers, using a partial function to repeat less code
+        self.master.bind(f'<KeyPress-{self.DROP_RED_KEY}>', partial(self.drop_marker, red=True))
+        self.master.bind(f'<KeyPress-{self.DROP_BLACK_KEY}>', partial(self.drop_marker, red=False))
 
     def read_temp_sensor(self, event=None):
         """Sends the SSH command to read the temperature sensor and updates its info box.
@@ -204,6 +213,22 @@ class ControlWindow():
 
         # update the GUI text box
         self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
+    
+    def drop_marker(self, event=None, red=True):
+        """
+        Drops a marker.
 
+        Arguments:
+            red (bool): True if a red marker should be dropped, False if a black one should be dropped
+        """
+        if red:
+            cmd, has_markers = self.markerdropper.drop_red_marker()
+        else:
+            cmd, has_markers = self.markerdropper.drop_black_marker()
+        print(cmd)
+        if has_markers:
+            self.ssh.exec_and_print(cmd)
+            self.markerdropper.success()
+    
 if __name__ == "__main__":
     x = ControlWindow()

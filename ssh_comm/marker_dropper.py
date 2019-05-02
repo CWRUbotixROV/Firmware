@@ -33,9 +33,12 @@ class MarkerDropper():
         self.ang_range = ang_range
         self.spacing = spacing
         self.angle = spacing/2      # start in the middle of two slots so markers don't fall out
-        self.red_markers = red_markers.sort()       # sort lists to minimize turning
-        self.black_markers = black_markers.sort()
+        self.red_markers = red_markers
+        self.black_markers = black_markers
+        self.red_markers.sort()
+        self.black_markers.sort()
         self.pin = pin
+        print(self.red_markers, self.black_markers)
 
         self.tmp_angle = self.angle     # used so we only update the angle and marker arrays once the command succeeds
         self.last_dropped = 'red'
@@ -53,9 +56,9 @@ class MarkerDropper():
             what we just did. It will only update if the pigs command is successful."""
             self.tmp_angle = (self.red_markers[0]-1)*self.spacing
             self.last_dropped = 'red'
-            return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin)
+            return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin), True
         print("No more red markers!")
-        return cmd_set_servo_angle(self.angle, ang_range=self.ang_range, pin=self.pin)
+        return cmd_set_servo_angle(self.angle, ang_range=self.ang_range, pin=self.pin), False
 
     def drop_black_marker(self):
         """
