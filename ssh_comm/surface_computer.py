@@ -2,7 +2,7 @@ from tkinter import * #imports everything from the tkinter library
 import time
 import random
 from ssh import SSH
-
+from marker_dropper import MarkerDropper
 
 class SettableText(Text):
     """Extends the tkinter Text object to allow the text to be changed."""
@@ -87,18 +87,21 @@ class ControlWindow():
     THRUSTER_FORWARD_KEY = 'w'
     TEMP_SENSOR_KEY = 't'
     PH_SENSOR_KEY = 'p'
+    DROP_RED_KEY = 'r'
+    DROP_BLACK_KEY = 'b'
 
     TEMP_TEXT = "Last Temperature\nReading: {READING}"
     PH_TEXT = "Last pH Reading: \n{READING}"
 
-    def __init__(self):
+    def __init__(self, use_zero=False, red_markers=[], black_markers=[]):
         self.ssh = SSH(SSH.COMPANION)
 
         transport = self.ssh.get_transport()
-        zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
         companion_addr = (SSH.COMPANION, 22)      # the address and port of the Pi 3, as seen by the surface computer
-        channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
-        self.zero_ssh = SSH(SSH.ZERO, sock=channel)
+        if use_zero:
+            zero_addr = (SSH.ZERO.ip, 22)         # the address and port of the Pi Zero, as seen by the Pi 3
+            channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
+            self.zero_ssh = SSH(SSH.ZERO, sock=channel)
 
         self.master = Tk()
 
@@ -120,10 +123,14 @@ class ControlWindow():
                                  '\nSensor Readings\n'
                                  'Press <{}> to get a temperature reading\n'
                                  'Press <{}> to get a pH reading.\n'
+                                 'Press <{}> to drop a red marker.\n'
+                                 'Press <{}> to drop a black marker.\n'
                                  ''.format(self.THRUSTER_FORWARD_KEY,
                                            self.THRUSTER_BACKWARD_KEY,
                                            self.TEMP_SENSOR_KEY,
-                                           self.PH_SENSOR_KEY))
+                                           self.PH_SENSOR_KEY,
+                                           self.DROP_RED_KEY,
+                                           self.DROP_BLACK_KEY))
 
         # place the instruction at the top of the GUI window
         instructions.grid(row=0, column=0, columnspan=2)
