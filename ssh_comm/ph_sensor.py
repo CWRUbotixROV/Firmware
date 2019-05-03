@@ -47,6 +47,8 @@ class PHSensor:
             # set up the ADC for conversions
             pi.spi_xfer(spi_handle, CONTINUOUS_CM)
             pi.spi_xfer(spi_handle, DRDYM)
+
+            print('Success')
         except:
             print('Failed to setup')
         finally:

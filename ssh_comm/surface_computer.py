@@ -247,7 +247,7 @@ class ControlWindow():
             result = self.ssh.exec_and_print('python ph_sensor.py --setup')
 
             # if the setup commands failed, update what the GUI displays
-            if 'Failed' in result:
+            if 'Success' not in result:
                 self.PH_TEXT = self.ERROR
         '''
 
