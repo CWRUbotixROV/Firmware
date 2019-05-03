@@ -26,6 +26,8 @@ Red connects to 3.3V, Blue connects to ground and Yellow is data (pin 7 which is
 1. Copy the `temp_reading.py` script to the companion computer in its home directory
 
 ### pH Sensor
+**IMPORTANT** The setup code in the surface_computer.py is commented out since it hasn't been tested yet.
+
 This sends setup commands to the ADC when the GUI starts up if an SSH connection was made to the companion computer.  This will put the pH sensor in the proper modes (continuous conversion and data ready mode) so that each reading gets the latest result stored on the ADC.  There will probably be a few seconds (or less - not sure how long) after sending those commands that the pH readings may be garbage / innacurate.  afterwards, pressing the pH reading key should put the read value into the GUI box.
 
 Note that this code still needs to be tested - specifically I do not think the reading I am getting in the PHSensor class of ph_sensor.py is actually a floating point number, rather it is the raw bytes which needs to be converted, but I wont be able to verify that until I test.
