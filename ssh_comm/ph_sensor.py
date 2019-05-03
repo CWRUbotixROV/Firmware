@@ -66,7 +66,7 @@ class PHSensor:
         # read the ADC
         reading = None
         try:
-            reading = pi.spi_xfer(spi_handle, RDATA)
+            (count, reading) = pi.spi_xfer(spi_handle, RDATA)
         except:
             print('Failed to read pH Sensor')
         finally:
