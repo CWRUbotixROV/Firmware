@@ -115,6 +115,7 @@ class ControlWindow():
     JUMBO_HOOK_ACTUATOR = 'd'
 
     NO_CONNECTION = 'No Connection: \n{READING}'
+    ERROR = 'Error in Setup:\n{READING}'
     TEMP_TEXT = 'Last Temperature\nReading: {READING}'
     PH_TEXT = 'Last pH Reading: \n{READING}'
     SMART_TEXT = 'Smart hook state: \n{READING}'
@@ -239,6 +240,15 @@ class ControlWindow():
                                        height=self.SENSOR_READING_HEIGHT,
                                        width=self.HALF_WINDOW_WIDTH)
         self.ph_reading.grid(row=self.SENSOR_ROW, column=self.PH_SENSOR_COL)
+
+        # send the setup commands to the pH sensor
+        if self.ssh is not None:
+            result = self.ssh.exec_and_print('python ph_sensor.py --setup')
+
+            # if the setup commands failed, update what the GUI displays
+            if 'Failed' in result:
+                self.PH_TEXT = self.ERROR
+
         self.ph_reading.set_text(self.PH_TEXT.format(READING=self.NO_READING))
 
         # create the text box for temperature reading under the right thruster
@@ -320,7 +330,7 @@ class ControlWindow():
         self.ph_reading.set_text(self.PH_TEXT.format(READING=self.READ_PENDING))
 
         # send the read command
-        reading = self.ssh.exec_and_print('python ph_reading.py')
+        reading = self.ssh.exec_and_print('python ph_sensor.py --read')
 
         # update the GUI text box
         self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
