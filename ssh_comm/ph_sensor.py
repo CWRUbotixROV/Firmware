@@ -1,5 +1,6 @@
 import pigpio as pi  # this might be the wrong import
 import argparse
+import struct
 
 class PHSensor:
     """Class to handle communication with the ADC that reads the pH sensor."""
@@ -75,7 +76,7 @@ class PHSensor:
             # cleanup
             self.close_channel()
 
-            return reading
+            return struct.unpack('d', reading)[0]
 
     def close_channel(self):
         """Closes the SPI channel to the ADC."""
