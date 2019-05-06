@@ -32,7 +32,7 @@ class MarkerDropper():
         """
         self.ang_range = ang_range
         self.spacing = spacing
-        self.angle = spacing/2      # start in the middle of two slots so markers don't fall out
+        self.angle = (len(red_markers)+len(black_markers)+1)*(spacing/2)  # start in the middle of the markers
         self.red_markers = red_markers
         self.black_markers = black_markers
         self.red_markers.sort()
@@ -42,7 +42,14 @@ class MarkerDropper():
 
         self.tmp_angle = self.angle     # used so we only update the angle and marker arrays once the command succeeds
         self.last_dropped = 'red'
-    
+
+    def go_to_start(self):
+        """
+        Returns a command to rotate the mechanism to the starting position. Should be called once, before any markers
+        are dropped. Alternatively, the mechanism can be positioned by hand, and this call can be omitted.
+        """
+        return cmd_set_servo_angle(self.angle, ang_range=self.ang_range, pin=self.pin)
+
     def drop_red_marker(self):
         """
         Generates the pigs command to drop a red marker if there are any left.
@@ -54,7 +61,7 @@ class MarkerDropper():
         if len(self.red_markers) > 0:
             """If there are still red markers left, we return the pigs command to drop the next one and store
             what we just did. It will only update if the pigs command is successful."""
-            self.tmp_angle = (self.red_markers[0]-1)*self.spacing
+            self.tmp_angle = (self.red_markers[-1]-1)*self.spacing  # go from the end
             self.last_dropped = 'red'
             return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin), True
         print("No more red markers!")
@@ -83,7 +90,7 @@ class MarkerDropper():
         """
         self.angle = self.tmp_angle
         if self.last_dropped=='red':
-            self.red_markers = self.red_markers[1:]
+            self.red_markers = self.red_markers[:-1]
         else:
             self.black_markers = self.black_markers[1:]
     
