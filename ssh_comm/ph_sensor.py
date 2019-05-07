@@ -1,6 +1,7 @@
-import pigpio as pi  # this might be the wrong import
+import pigpio  # this might be the wrong import
 import argparse
 import struct
+import time
 
 class PHSensor:
     """Class to handle communication with the ADC that reads the pH sensor."""
@@ -24,18 +25,29 @@ class PHSensor:
     SPI_BAUD    = 256000
     SPI_CHANNEL = 0  # CE is on pin 8
 
-    # commands
-    RDATA         = 0x10
-    CONTINUOUS_CM = 0x0 # continuous conversion mode
-    DRDYM         = [0x00, 0x00]
+    SPI_CMD_DELAY = 500.0 / 100000.0
 
-    def __init__():
+    # commands
+
+    # write register 0 to set gain to 4, register 1 to enable continuous conversion
+    # 0x41 sends WREG with register offset of 0 and to write 2 bytes from that point
+    # the first byte in setup reg is the aforementioned WREG and the following bytes
+    # are the values being written to the reigsters
+    SETUP_REG     = bytearray([0x41, 0x0A, 0x04])
+    # read all the registers for debugging
+    READ_ALL_REG  = bytearray([0x23, 0x00, 0x00, 0x00, 0x00])
+    RDATA         = bytearray([0x10, 0x00, 0x00])
+    START         = bytearray([0x08]) # starts the continuous conversion
+    RESET         = bytearray([0x06]) # resets the ADC
+
+    def __init__(self):
         self.channel_open = False
         self.spi_handle = None
+        self.pi = pigpio.pi()
 
     def open_channel(self):
         """Opens the connection to the ADC."""
-        self.spi_handle = pi.spi_open(self.SPI_CHANNEL, self.SPI_BAUD, self.SPI_CHANNEL)
+        self.spi_handle = self.pi.spi_open(self.SPI_CHANNEL, self.SPI_BAUD, self.SPI_FLAGS)
         self.channel_open = True
 
     def power_on_setup(self):
@@ -44,17 +56,33 @@ class PHSensor:
         if not self.channel_open:
             self.open_channel()
 
-        try:
-            # set up the ADC for conversions
-            pi.spi_xfer(spi_handle, CONTINUOUS_CM)
-            pi.spi_xfer(spi_handle, DRDYM)
+        #try:
+        # set up the ADC for conversions
+        self.pi.spi_write(self.spi_handle, self.RESET)
+        time.sleep(self.SPI_CMD_DELAY)
+        self.pi.spi_write(self.spi_handle, self.SETUP_REG)
+        time.sleep(self.SPI_CMD_DELAY)
+        self.pi.spi_write(self.spi_handle, self.START)
+        time.sleep(self.SPI_CMD_DELAY)
 
-            print('Success')
+        '''    print('Success')
         except:
             print('Failed to setup')
-        finally:
-            # cleanup
-            self.close_channel()
+        finally:'''
+        # cleanup
+        self.close_channel()
+
+    def _adc_conversion(self, reading):
+        VREF = 2.048
+        GAIN = 16
+
+        # conversion factor from ADC datasheet equation 16
+        factor = (2 * VREF / GAIN) / (2 ** 16)
+
+        # convert the reading to an integer ignoring the first byte
+        reading_to_int = struct.unpack('>H', reading[1:])[0]
+
+        return factor * reading_to_int
 
     def pH_reading(self):
         """Sends the read command to the pH sensor ADC and returns the result
@@ -69,18 +97,20 @@ class PHSensor:
         # read the ADC
         reading = None
         try:
-            (count, reading) = pi.spi_xfer(spi_handle, RDATA)
+            (count, reading) = self.pi.spi_xfer(self.spi_handle, self.RDATA)
+
+            print('Count: {}, Reading: {}'.format(count, repr(reading)))
         except:
             print('Failed to read pH Sensor')
         finally:
             # cleanup
             self.close_channel()
 
-            return struct.unpack('d', reading)[0]
+            return self._adc_conversion(reading)
 
     def close_channel(self):
         """Closes the SPI channel to the ADC."""
-        pi.spi_close(self.spi_handle)
+        self.pi.spi_close(self.spi_handle)
         self.channel_open = False
         self.spi_handle = None
 
