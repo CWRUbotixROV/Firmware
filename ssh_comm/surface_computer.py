@@ -43,14 +43,14 @@ class ThrusterControl():
         self.forward = False
         self.backward = False
 
-        self.text_output = text_output
-        self.thruster_forward_off()
-        self.thruster_backward_off()
-
         self.ssh = ssh
 
         if self.ssh is None:
             self.DESC = self.NO_CONNECTION
+
+        self.text_output = text_output
+        self.thruster_forward_off()
+        self.thruster_backward_off()
 
     def thruster_forward(self, event=None):
         """Sends the command to move forward and updates the GUI.
@@ -163,6 +163,7 @@ class ControlWindow():
             self.ssh = None
 
         # attempt to connect to the Pi Zero
+        '''Uncomment once we actually have a BabyRov
         try:
             transport = self.ssh.get_transport()
             zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
@@ -173,15 +174,20 @@ class ControlWindow():
         except:
             print('No connection to thruster')
             self.zero_ssh=None
+        '''
+        self.zero_ssh=None  # remove this when above code gets uncommented
 
         # attempt to connect to the arduino serial port
+        ''' uncomment this and tab over the below code into the except once the relays are set up
         try:
             self.serial_conn = serial.Serial('COM13', 9600) # change this COM port with whatever comes up when plugged in
         # if no connection can be made, update the GUI to reflect that
         except:
-            self.SMART_TEXT = self.NO_CONNECTION
-            self.JUMBO_TEXT = self.NO_CONNECTION
-            self.serial_conn = None
+        '''
+        self.SMART_TEXT = self.NO_CONNECTION
+        self.JUMBO_TEXT = self.NO_CONNECTION
+        self.serial_conn = None
+
 
         self.smart_hook_state = self.HOOK_OFF
         self.jumbo_hook_state = self.HOOK_OFF
@@ -221,6 +227,8 @@ class ControlWindow():
                           column=self.INSTRUCTIONS_COL,
                           columnspan=self.NUM_COLUMNS)
         instructions.grid()
+
+        instructions.config(state='disabled')
 
     def _setup_thrusters(self):
         """Adds the thruster info boxes to the GUI."""
