@@ -33,7 +33,7 @@ class PHSensor:
     # 0x41 sends WREG with register offset of 0 and to write 2 bytes from that point
     # the first byte in setup reg is the aforementioned WREG and the following bytes
     # are the values being written to the reigsters
-    SETUP_REG     = bytearray([0x41, 0x0A, 0x04])
+    SETUP_REG     = bytearray([0x43, 0x0A, 0x04, 0x00, 0x00])
     # read all the registers for debugging
     READ_ALL_REG  = bytearray([0x23, 0x00, 0x00, 0x00, 0x00])
     RDATA         = bytearray([0x10, 0x00, 0x00])
@@ -73,6 +73,12 @@ class PHSensor:
         self.close_channel()
 
     def _adc_conversion(self, reading):
+        """Performs the conversion from the raw bytestring to a floating point pH
+
+        :param bytearray reading: the raw reading from the RDATA command of the pH sensor
+        :returns: a floating point number representing the converted result in pH
+
+        """
         VREF = 2.048
         GAIN = 16
 
