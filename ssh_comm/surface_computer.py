@@ -249,7 +249,6 @@ class ControlWindow():
                                        width=self.HALF_WINDOW_WIDTH)
         self.ph_reading.grid(row=self.SENSOR_ROW, column=self.PH_SENSOR_COL)
 
-        '''uncomment once ph sensor reading is working
         # send the setup commands to the pH sensor
         if self.ssh is not None:
             result = self.ssh.exec_and_print('python ph_sensor.py --setup')
@@ -257,7 +256,6 @@ class ControlWindow():
             # if the setup commands failed, update what the GUI displays
             if 'Success' not in result:
                 self.PH_TEXT = self.ERROR
-        '''
 
         self.ph_reading.set_text(self.PH_TEXT.format(READING=self.NO_READING))
 

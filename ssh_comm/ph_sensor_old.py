@@ -33,7 +33,7 @@ class PHSensor:
     # 0x41 sends WREG with register offset of 0 and to write 2 bytes from that point
     # the first byte in setup reg is the aforementioned WREG and the following bytes
     # are the values being written to the reigsters
-    SETUP_REG     = bytearray([0x43, 0x0E, 0x04, 0x00, 0x00])
+    SETUP_REG     = bytearray([0x41, 0x0A, 0x04])
     # read all the registers for debugging
     READ_ALL_REG  = bytearray([0x23, 0x00, 0x00, 0x00, 0x00])
     RDATA         = bytearray([0x10, 0x00, 0x00])
@@ -56,37 +56,31 @@ class PHSensor:
         if not self.channel_open:
             self.open_channel()
 
-        try:
-            # set up the ADC for conversions
-            self.pi.spi_write(self.spi_handle, self.RESET)
-            time.sleep(self.SPI_CMD_DELAY)
-            self.pi.spi_write(self.spi_handle, self.SETUP_REG)
-            time.sleep(self.SPI_CMD_DELAY)
-            self.pi.spi_write(self.spi_handle, self.START)
-            time.sleep(self.SPI_CMD_DELAY)
+        #try:
+        # set up the ADC for conversions
+        self.pi.spi_write(self.spi_handle, self.RESET)
+        time.sleep(self.SPI_CMD_DELAY)
+        self.pi.spi_write(self.spi_handle, self.SETUP_REG)
+        time.sleep(self.SPI_CMD_DELAY)
+        self.pi.spi_write(self.spi_handle, self.START)
+        time.sleep(self.SPI_CMD_DELAY)
 
-            print('Success')
+        '''    print('Success')
         except:
             print('Failed to setup')
-        finally:
-            # cleanup
-            self.close_channel()
+        finally:'''
+        # cleanup
+        self.close_channel()
 
     def _adc_conversion(self, reading):
-        """Performs the conversion from the raw bytestring to a floating point pH
-
-        :param bytearray reading: the raw reading from the RDATA command of the pH sensor
-        :returns: a floating point number representing the converted result in pH
-
-        """
         VREF = 2.048
-        GAIN = 128
+        GAIN = 16
 
         # conversion factor from ADC datasheet equation 16
         factor = (2 * VREF / GAIN) / (2 ** 16)
 
         # convert the reading to an integer ignoring the first byte
-        reading_to_int = struct.unpack('>h', reading[1:])[0]
+        reading_to_int = struct.unpack('>H', reading[1:])[0]
 
         return factor * reading_to_int
 
@@ -105,7 +99,7 @@ class PHSensor:
         try:
             (count, reading) = self.pi.spi_xfer(self.spi_handle, self.RDATA)
 
-            # print('Count: {}, Reading: {}'.format(count, repr(reading)))
+            print('Count: {}, Reading: {}'.format(count, repr(reading)))
         except:
             print('Failed to read pH Sensor')
         finally:
@@ -113,30 +107,6 @@ class PHSensor:
             self.close_channel()
 
             return self._adc_conversion(reading)
-
-    def read_reg(self):
-        """Sends the read command to the pH sensor ADC and returns the result
-
-        :returns: a floating point number with the lastest pH sensor reading
-
-        """
-        # open a SPI channel if not open
-        if not self.channel_open:
-            self.open_channel()
-
-        # read the ADC
-        reading = None
-        try:
-            (count, reading) = self.pi.spi_xfer(self.spi_handle, self.READ_ALL_REG)
-
-            # print('Count: {}, Reading: {}'.format(count, repr(reading)))
-        except:
-            print('Failed to read pH Sensor')
-        finally:
-            # cleanup
-            self.close_channel()
-
-            return repr(reading)
 
     def close_channel(self):
         """Closes the SPI channel to the ADC."""
@@ -154,8 +124,6 @@ def parse_cmd_args():
     parser.add_argument('--read',
                         action='store_true',
                         help='Reads the last value read by the pH sensor ADC')
-    parser.add_argument('--reg',
-                        action='store_true')
 
     return parser.parse_args()
 
@@ -174,7 +142,5 @@ if __name__ == "__main__":
     if args.read:
         # read the latest value on the ADC (assumes setup already happened)
         print(sensor.pH_reading())
-    elif args.reg:
-        print(sensor.read_reg())
     else:
         pass
