@@ -94,7 +94,7 @@ class ControlWindow():
     TEMP_TEXT = "Last Temperature\nReading: {READING}"
     PH_TEXT = "Last pH Reading: \n{READING}"
 
-    def __init__(self, use_zero=False, red=[1, 3, 5], black=[2, 4, 6]):
+    def __init__(self, use_zero=False, red=[1, 2, 3], black=[5, 6, 7]):
         self.ssh = SSH(SSH.COMPANION)
 
         transport = self.ssh.get_transport()

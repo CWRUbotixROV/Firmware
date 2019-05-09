@@ -32,7 +32,7 @@ class MarkerDropper():
         """
         self.ang_range = ang_range
         self.spacing = spacing
-        self.angle = (len(red_markers)+len(black_markers)+1)*(spacing/2)  # start in the middle of the markers
+        self.angle = red_markers[-1]*spacing    # start one place over from the last red marker
         self.red_markers = red_markers
         self.black_markers = black_markers
         self.red_markers.sort()
