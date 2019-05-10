@@ -33,7 +33,7 @@ class PHSensor:
     # 0x41 sends WREG with register offset of 0 and to write 2 bytes from that point
     # the first byte in setup reg is the aforementioned WREG and the following bytes
     # are the values being written to the reigsters
-    SETUP_REG     = bytearray([0x43, 0x0E, 0x04, 0x00, 0x00])
+    SETUP_REG     = bytearray([0x43, 0x30, 0x04, 0x00, 0x00])
     # read all the registers for debugging
     READ_ALL_REG  = bytearray([0x23, 0x00, 0x00, 0x00, 0x00])
     RDATA         = bytearray([0x10, 0x00, 0x00])
@@ -80,7 +80,7 @@ class PHSensor:
 
         """
         VREF = 2.048
-        GAIN = 128
+        GAIN = 1
 
         # conversion factor from ADC datasheet equation 16
         factor = (2 * VREF / GAIN) / (2 ** 16)
@@ -88,7 +88,12 @@ class PHSensor:
         # convert the reading to an integer ignoring the first byte
         reading_to_int = struct.unpack('>h', reading[1:])[0]
 
-        return factor * reading_to_int
+        # windex avg: -0.091777
+        # storage solution: 0.0223975
+        LIN_FIT_SLOPE = -26.27557
+        LIN_FIT_INTERCEPT = 7.5885
+
+        return ((factor * reading_to_int) * LIN_FIT_SLOPE) + LIN_FIT_INTERCEPT
 
     def pH_reading(self):
         """Sends the read command to the pH sensor ADC and returns the result
