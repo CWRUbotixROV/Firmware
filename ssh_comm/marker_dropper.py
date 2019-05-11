@@ -1,6 +1,6 @@
 """Code to control the marker dropper."""
 
-def cmd_set_servo_angle(angle, ang_range=270, pin=20):
+def cmd_set_servo_angle(angle, ang_range=270, pin=18):
     """
     Returns a pigs command to set the angle of a servo.
 

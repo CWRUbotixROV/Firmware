@@ -4,6 +4,7 @@ import random
 from ssh import SSH
 from marker_dropper import MarkerDropper
 from functools import partial
+from marker_dropper import cmd_set_servo_angle
 
 class SettableText(Text):
     """Extends the tkinter Text object to allow the text to be changed."""
@@ -118,6 +119,20 @@ class ControlWindow():
         self._bind_keys()
 
         self.master.mainloop()
+    
+    def jiggle_dropper(self):
+        """
+        Jiggle the marker dropper back and forth to release the marker.
+        """
+        left_cmd = cmd_set_servo_angle(self.markerdropper.angle-5)
+        right_cmd = cmd_set_servo_angle(self.markerdropper.angle+5)
+        home_cmd = cmd_set_servo_angle(self.markerdropper.angle)
+        for i in range(3):
+            self.ssh.exec_and_print(left_cmd)
+            time.sleep(0.2)
+            self.ssh.exec_and_print(right_cmd)
+            time.sleep(0.2)
+        self.ssh.exec_and_print(home_cmd)
 
     def _add_instructions(self):
         """Adds the instruction text box to the GUI."""
@@ -230,6 +245,7 @@ class ControlWindow():
         if has_markers:
             self.ssh.exec_and_print(cmd)
             self.markerdropper.success()
+            self.jiggle_dropper()
     
 if __name__ == "__main__":
     x = ControlWindow()
