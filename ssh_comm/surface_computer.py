@@ -3,9 +3,11 @@ import time
 import random
 import serial
 from ssh import SSH
+from marker_dropper import MarkerDropper
+from functools import partial
+from marker_dropper import cmd_set_servo_angle
 
 """See documentation/Surface_Computer.md for more information on this script"""
-
 
 class SettableText(Text):
     """Extends the tkinter Text object to allow the text to be changed."""
@@ -113,6 +115,8 @@ class ControlWindow():
     PH_SENSOR_KEY = 'p'
     SMART_HOOK_ACTUATOR = 'a'
     JUMBO_HOOK_ACTUATOR = 'd'
+    DROP_RED_KEY = 'r'
+    DROP_BLACK_KEY = 'b'
 
     NO_CONNECTION = 'No Connection: \n{READING}'
     ERROR = 'Error in Setup:\n{READING}'
@@ -133,7 +137,7 @@ class ControlWindow():
     THRUSTER_STATUS_HEIGHT = 1
     SENSOR_READING_HEIGHT  = 2
     HOOK_STATUS_HEIGHT     = 2
-    TOTAL_WINDOW_HEIGHT    = 12
+    TOTAL_WINDOW_HEIGHT    = 14
 
     # Rows
     NUM_ROWS         = 3
@@ -152,10 +156,13 @@ class ControlWindow():
     JUMBO_HOOK_COL   = 1
 
 
-    def __init__(self):
+    def __init__(self, use_zero=False, red=[-3, -2, -1], black=[1, 2, 3]):
         # attempt to connect to the Companion computer.
         try:
             self.ssh = SSH(SSH.COMPANION)
+
+            self.markerdropper = MarkerDropper(270, 40, red_markers=red, black_markers=black, pin=18)
+            self.ssh.exec_and_print(self.markerdropper.go_to_start())
         # if no connection can be made, make a note of that on the GUI
         except:
             self.TEMP_TEXT = self.NO_CONNECTION
@@ -166,10 +173,13 @@ class ControlWindow():
         '''Uncomment once we actually have a BabyRov
         try:
             transport = self.ssh.get_transport()
-            zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
             companion_addr = (SSH.COMPANION, 22)      # the address and port of the Pi 3, as seen by the surface computer
-            channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
-            self.zero_ssh = SSH(SSH.ZERO, sock=channel)
+            if use_zero:
+                zero_addr = (SSH.ZERO.ip, 22)         # the address and port of the Pi Zero, as seen by the Pi 3
+                channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
+                self.zero_ssh = SSH(SSH.ZERO, sock=channel)
+
+            self.ssh.exec_and_print('sudo pigpiod')  # pigpio daemon needs to be started manually for now
         # if no connection can be made, print to the console no connection was made
         except:
             print('No connection to thruster')
@@ -203,6 +213,20 @@ class ControlWindow():
 
         self.master.mainloop()
 
+    def jiggle_dropper(self):
+        """
+        Jiggle the marker dropper back and forth to release the marker.
+        """
+        left_cmd = cmd_set_servo_angle(self.markerdropper.angle-5)
+        right_cmd = cmd_set_servo_angle(self.markerdropper.angle+5)
+        home_cmd = cmd_set_servo_angle(self.markerdropper.angle)
+        for i in range(3):
+            self.ssh.exec_and_print(left_cmd)
+            time.sleep(0.2)
+            self.ssh.exec_and_print(right_cmd)
+            time.sleep(0.2)
+        self.ssh.exec_and_print(home_cmd)
+
     def _add_instructions(self):
         """Adds the instruction text box to the GUI."""
         instructions = Text(self.master, height=self.TOTAL_WINDOW_HEIGHT, width=self.WINDOW_WIDTH)
@@ -215,12 +239,16 @@ class ControlWindow():
                                  'Press <{}> to get a pH reading.\n'
                                  'Press <{}> to toggle the smart hook actuator\n'
                                  'Press <{}> to toggle the jumbo hook actuator\n'
+                                 'Press <{}> to drop a red marker.\n'
+                                 'Press <{}> to drop a black marker.\n'
                                  ''.format(self.THRUSTER_FORWARD_KEY,
                                            self.THRUSTER_BACKWARD_KEY,
                                            self.TEMP_SENSOR_KEY,
                                            self.PH_SENSOR_KEY,
                                            self.SMART_HOOK_ACTUATOR,
-                                           self.JUMBO_HOOK_ACTUATOR))
+                                           self.JUMBO_HOOK_ACTUATOR,
+                                           self.DROP_RED_KEY,
+                                           self.DROP_BLACK_KEY))
 
         # place the instruction at the top of the GUI window
         instructions.grid(row=self.INSTRUCTIONS_ROW,
@@ -304,6 +332,10 @@ class ControlWindow():
         self.master.bind('<KeyPress-{}>'.format(self.PH_SENSOR_KEY),
                          self.read_ph_sensor)
 
+        # bind the keys to drop red and black markers, using a partial function to repeat less code
+        self.master.bind(f'<KeyPress-{self.DROP_RED_KEY}>', partial(self.drop_marker, red=True))
+        self.master.bind(f'<KeyPress-{self.DROP_BLACK_KEY}>', partial(self.drop_marker, red=False))
+
         # bind smart hook actuator
         self.master.bind('<KeyPress-{}>'.format(self.SMART_HOOK_ACTUATOR),
                          self.toggle_smart_hook)
@@ -342,6 +374,23 @@ class ControlWindow():
 
         # update the GUI text box
         self.ph_reading.set_text(self.PH_TEXT.format(READING=reading))
+
+    def drop_marker(self, event=None, red=True):
+        """
+        Drops a marker.
+
+        Arguments:
+            red (bool): True if a red marker should be dropped, False if a black one should be dropped
+        """
+        if red:
+            cmd, has_markers = self.markerdropper.drop_red_marker()
+        else:
+            cmd, has_markers = self.markerdropper.drop_black_marker()
+        print(cmd)
+        if has_markers:
+            self.ssh.exec_and_print(cmd)
+            self.markerdropper.success()
+            self.jiggle_dropper()
 
     def toggle_smart_hook(self, event=None):
         """Sends the serial command to toggle the smart hook and update its status box.
