@@ -94,7 +94,7 @@ class ControlWindow():
     TEMP_TEXT = "Last Temperature\nReading: {READING}"
     PH_TEXT = "Last pH Reading: \n{READING}"
 
-    def __init__(self, use_zero=False, red=[1, 2, 3], black=[5, 6, 7]):
+    def __init__(self, use_zero=False, red=[-3, -2, -1], black=[1, 2, 3]):
         self.ssh = SSH(SSH.COMPANION)
 
         transport = self.ssh.get_transport()
@@ -108,7 +108,8 @@ class ControlWindow():
 
         self.master = Tk()
         
-        self.markerdropper = MarkerDropper(270, 40, red_markers=red, black_markers=black, pin=20)
+        self.markerdropper = MarkerDropper(270, 40, red_markers=red, black_markers=black, pin=18)
+        self.ssh.exec_and_print(self.markerdropper.go_to_start())
 
         self._add_instructions()
         self._setup_thrusters()

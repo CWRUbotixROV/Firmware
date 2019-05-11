@@ -19,7 +19,7 @@ def cmd_set_servo_angle(angle, ang_range=270, pin=20):
 class MarkerDropper():
     """A class to represent the marker dropper on the ROV."""
     
-    def __init__(self, ang_range=270, spacing=40, red_markers=[], black_markers=[], pin=20):
+    def __init__(self, ang_range=270, spacing=40, red_markers=[], black_markers=[], pin=18):
         """
         Initialize the MarkerDropper object.
 
@@ -32,7 +32,8 @@ class MarkerDropper():
         """
         self.ang_range = ang_range
         self.spacing = spacing
-        self.angle = red_markers[-1]*spacing    # start one place over from the last red marker
+        self.offset = ang_range/2 + 8
+        self.angle = self.offset
         self.red_markers = red_markers
         self.black_markers = black_markers
         self.red_markers.sort()
@@ -61,7 +62,7 @@ class MarkerDropper():
         if len(self.red_markers) > 0:
             """If there are still red markers left, we return the pigs command to drop the next one and store
             what we just did. It will only update if the pigs command is successful."""
-            self.tmp_angle = (self.red_markers[-1]-1)*self.spacing  # go from the end
+            self.tmp_angle = (self.red_markers[-1])*self.spacing + self.offset  # go from the end
             self.last_dropped = 'red'
             return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin), True
         print("No more red markers!")
@@ -77,7 +78,7 @@ class MarkerDropper():
         """
         if len(self.black_markers) > 0:
             # Works exactly like drop_red_marker
-            self.tmp_angle = (self.black_markers[0]-1)*self.spacing
+            self.tmp_angle = (self.black_markers[0])*self.spacing + self.offset
             self.last_dropped = 'black'
             return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin), True
         print("No more black markers!")
