@@ -32,7 +32,7 @@ class ThrusterControl():
     BACKWARD = '{DESC}: Backward'
     OFF = '{DESC}: Off'
 
-    def __init__(self, ssh, text_output):
+    def __init__(self, ssh, text_output, speed, winch_forward_speed, winch_backward_speed):
         """Create a new ThrusterControl object
 
         :param string name:     an arbitrary name for the thruster
@@ -43,12 +43,20 @@ class ThrusterControl():
         self.forward = False
         self.backward = False
 
-        self.ssh = ssh
-
-        if self.ssh is None:
-            self.DESC = self.NO_CONNECTION
+        if ssh is not None:
+            self.ssh = ssh
+            self.FORWARD.format(DESC=self.DESC)
+            self.BACKWARD.format(DESC=self.DESC)
+        else:
+            self.ssh = None
+            self.FORWARD.format(DESC=self.NO_CONNECTION)
+            self.BACKWARD.format(DESC=self.NO_CONNECTION)
+            print("Thruster has no connection")
 
         self.text_output = text_output
+        self.speed_text = speed
+        self.winch_forward_speed_text = winch_forward_speed
+        self.winch_backward_speed_text = winch_backward_speed
         self.thruster_forward_off()
         self.thruster_backward_off()
 
@@ -62,6 +70,10 @@ class ThrusterControl():
         """
         if not self.forward and not self.backward:
             self.text_output.set_text(self.FORWARD.format(DESC=self.DESC))
+            speed = self.speed_text.get('1.0', END)
+            winch_speed = self.winch_forward_speed_text.get('1.0', END)
+            if self.ssh is not None:
+                self.ssh.exec_and_print('python babyrov_control.py --forward {} {}'.format(winch_speed, speed))
             self.forward = True
 
     def thruster_backward(self, event=None):
@@ -74,6 +86,10 @@ class ThrusterControl():
         """
         if not self.forward and not self.backward:
             self.text_output.set_text(self.BACKWARD.format(DESC=self.DESC))
+            speed = self.speed_text.get('1.0', END)
+            winch_speed = self.winch_backward_speed_text.get('1.0', END)
+            if self.ssh is not None:
+                self.ssh.exec_and_print('python babyrov_control.py --backward {}'.format(winch_speed))
             self.backward = True
 
     def thruster_forward_off(self, event=None):
@@ -88,6 +104,8 @@ class ThrusterControl():
 
         if not self.backward:
             self.text_output.set_text(self.OFF.format(DESC=self.DESC))
+            if self.ssh is not None:
+                self.ssh.exec_and_print('python babyrov_control.py --stop')
         else:
             self.thruster_backward()
 
@@ -102,6 +120,8 @@ class ThrusterControl():
 
         if not self.forward:
             self.text_output.set_text(self.OFF.format(DESC=self.DESC))
+            if self.ssh is not None:
+                self.ssh.exec_and_print('python babyrov_control.py --stop')
         else:
             self.thruster_forward()
 
@@ -126,25 +146,35 @@ class ControlWindow():
     HOOK_OFF = 'Off'
 
     # Widths
-    WINDOW_WIDTH      = 40
-    HALF_WINDOW_WIDTH = 20
+    WINDOW_WIDTH       = 60
+    HALF_WINDOW_WIDTH  = 30
+    THIRD_WINDOW_WIDTH = 20
 
     # Heights
-    THRUSTER_STATUS_HEIGHT = 1
-    SENSOR_READING_HEIGHT  = 2
-    HOOK_STATUS_HEIGHT     = 2
-    TOTAL_WINDOW_HEIGHT    = 12
+    INFO_BOX_HEIGHT             = 9
+    THRUSTER_SPEED_HEIGHT       = 1
+    WINCH_FORWARD_SPEED_HEIGHT  = 1
+    WINCH_BACKWARD_SPEED_HEIGHT = 1
+    THRUSTER_STATUS_HEIGHT      = 1
+    SENSOR_READING_HEIGHT       = 2
+    HOOK_STATUS_HEIGHT          = 2
+    TOTAL_WINDOW_HEIGHT         = 16
 
     # Rows
-    NUM_ROWS         = 3
-    INSTRUCTIONS_ROW = 0
-    THRUSTERS_ROW    = 1
-    SENSOR_ROW       = 2
-    HOOK_ROW         = 3
+    NUM_ROWS                 = 7
+    INSTRUCTIONS_ROW         = 0
+    THRUSTER_SPEED_ROW       = 1
+    WINCH_FORWARD_SPEED_ROW  = 2
+    WINCH_BACKWARD_SPEED_ROW = 3
+    THRUSTERS_ROW            = 4
+    SENSOR_ROW               = 5
+    HOOK_ROW                 = 6
 
     # Columns
     NUM_COLUMNS      = 2
     INSTRUCTIONS_COL = 0
+    SPEED_DESC_COL   = 0
+    SPEED_COL        = 1
     THRUSTERS_COL    = 0
     TEMP_SENSOR_COL  = 0
     PH_SENSOR_COL    = 1
@@ -154,28 +184,13 @@ class ControlWindow():
 
     def __init__(self):
         # attempt to connect to the Companion computer.
-        try:
+        '''try:
             self.ssh = SSH(SSH.COMPANION)
         # if no connection can be made, make a note of that on the GUI
-        except:
-            self.TEMP_TEXT = self.NO_CONNECTION
-            self.PH_TEXT = self.NO_CONNECTION
-            self.ssh = None
-
-        # attempt to connect to the Pi Zero
-        '''Uncomment once we actually have a BabyRov
-        try:
-            transport = self.ssh.get_transport()
-            zero_addr = (SSH.ZERO.ip, 22)             # the address and port of the Pi Zero, as seen by the Pi 3
-            companion_addr = (SSH.COMPANION, 22)      # the address and port of the Pi 3, as seen by the surface computer
-            channel = transport.open_channel('direct-tcpip', zero_addr, companion_addr)
-            self.zero_ssh = SSH(SSH.ZERO, sock=channel)
-        # if no connection can be made, print to the console no connection was made
-        except:
-            print('No connection to thruster')
-            self.zero_ssh=None
-        '''
-        self.zero_ssh=None  # remove this when above code gets uncommented
+        except:'''
+        self.TEMP_TEXT = self.NO_CONNECTION
+        self.PH_TEXT = self.NO_CONNECTION
+        self.ssh = None
 
         # attempt to connect to the arduino serial port
         ''' uncomment this and tab over the below code into the except once the relays are set up
@@ -205,7 +220,7 @@ class ControlWindow():
 
     def _add_instructions(self):
         """Adds the instruction text box to the GUI."""
-        instructions = Text(self.master, height=self.TOTAL_WINDOW_HEIGHT, width=self.WINDOW_WIDTH)
+        instructions = Text(self.master, height=self.INFO_BOX_HEIGHT, width=self.WINDOW_WIDTH)
 
         instructions.insert(END, 'Baby ROV Control:\n'
                                  'Press <{}> to move forward\n'
@@ -232,6 +247,34 @@ class ControlWindow():
 
     def _setup_thrusters(self):
         """Adds the thruster info boxes to the GUI."""
+
+        self.thruster_speed_desc = Text(self.master, height=self.THRUSTER_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
+        self.thruster_speed_desc.grid(row=self.THRUSTER_SPEED_ROW, column=self.SPEED_DESC_COL)
+        self.thruster_speed_desc.insert(END, 'Thruster Speed:')
+        self.thruster_speed_desc.config(state='disabled')
+
+        self.winch_forward_speed_desc = Text(self.master, height=self.WINCH_FORWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
+        self.winch_forward_speed_desc.grid(row=self.WINCH_FORWARD_SPEED_ROW, column=self.SPEED_DESC_COL)
+        self.winch_forward_speed_desc.insert(END, 'Winch Forward Speed:')
+        self.winch_forward_speed_desc.config(state='disabled')
+
+        self.winch_backward_speed_desc = Text(self.master, height=self.WINCH_BACKWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
+        self.winch_backward_speed_desc.grid(row=self.WINCH_BACKWARD_SPEED_ROW, column=self.SPEED_DESC_COL)
+        self.winch_backward_speed_desc.insert(END, 'Winch Backward Speed:')
+        self.winch_backward_speed_desc.config(state='disabled')
+
+        self.thruster_speed = Text(self.master, height=self.THRUSTER_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
+        self.thruster_speed.grid(row=self.THRUSTER_SPEED_ROW, column=self.SPEED_COL)
+        self.thruster_speed.insert(END, '0')
+
+        self.winch_forward_speed = Text(self.master, height=self.WINCH_FORWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
+        self.winch_forward_speed.grid(row=self.WINCH_FORWARD_SPEED_ROW, column=self.SPEED_COL)
+        self.winch_forward_speed.insert(END, '0')
+
+        self.winch_backward_speed = Text(self.master, height=self.WINCH_BACKWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
+        self.winch_backward_speed.grid(row=self.WINCH_BACKWARD_SPEED_ROW, column=self.SPEED_COL)
+        self.winch_backward_speed.insert(END, '0')
+
         # create text box for left thruster on left under the instructions
         self.thruster_state = SettableText(self.master,
                                            height=self.THRUSTER_STATUS_HEIGHT,
@@ -239,7 +282,11 @@ class ControlWindow():
         self.thruster_state.grid(row=self.THRUSTERS_ROW, column=self.THRUSTERS_COL,  columnspan=self.NUM_COLUMNS)
 
         # create control object for left thruster
-        self.thruster = ThrusterControl(None, self.thruster_state)
+        self.thruster = ThrusterControl(self.ssh,
+                                        self.thruster_state,
+                                        self.thruster_speed,
+                                        self.winch_forward_speed,
+                                        self.winch_backward_speed)
 
     def _setup_sensors(self):
         """Adds the pH and temperature info boxes to the GUI."""
