@@ -6,15 +6,15 @@
 #define SERIAL_WAIT_DELAY 10
 #define BAUD_RATE 9600
 
-Servo motor;
+Servo thruster;
 void setup() {
     Serial.begin(BAUD_RATE);
 
     // setup the thruster
-    motor.attach(THRUSTER_PIN);
+    thruster.attach(THRUSTER_PIN);
 
     // turn off the thruster
-    motor.writeMicroseconds(MIN_VALUE);
+    thruster.writeMicroseconds(MIN_VALUE);
 }
 
 void loop() {
@@ -25,7 +25,7 @@ void loop() {
         // check that the value received is valid
         if (value >= MIN_VALUE && value <= MAX_VALUE) {
             // turn on the thruster to the read value
-            motor.writeMicroseconds(value);
+            thruster.writeMicroseconds(value);
         }
     }
     // wait a short period before checking the serial again

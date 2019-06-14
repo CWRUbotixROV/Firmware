@@ -1,7 +1,8 @@
-#import pigpio  # this might be the wrong import
+import pigpio
 import argparse
 import struct
 import time
+import serial
 
 ARGS_WINCH_SPEED_IDX    = 0
 ARGS_THRUSTER_SPEED_IDX = 1
