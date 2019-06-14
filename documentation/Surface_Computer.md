@@ -21,6 +21,10 @@ In the `ssh_comm` folder of this repository, you can run the `surface_computer.p
 Red connects to 3.3V, Blue connects to ground and Yellow is data (pin 7 which is GPIO04)
 4.7 kOhm resistor between data and VCC
 
+For more information, see [this tutorial](http://www.circuitbasics.com/raspberry-pi-ds18b20-temperature-sensor-tutorial/)
+
+Pin Diagram
+
 #### Pi Setup
 1. Open `/boot/config.txt` on the companion computer and add `dtoverlay=w1-gpio` to the bottom of the file (if not already there) and reboot the pi
     - Note that the `/boot/config.txt` can be accessed on the boot directory of the SD card instead of logging into the companion computer

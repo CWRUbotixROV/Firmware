@@ -12,8 +12,8 @@ class Winch():
     PWM_OFF = 0
 
     ENABLE_PIN        = 12 # Channel 0 GPIO 12 has hardware timed PWM
-    MOTOR_INPUT_PIN_1 = 1 # TODO
-    MOTOR_INPUT_PIN_2 = 2 # TODO
+    MOTOR_INPUT_PIN_1 = 23
+    MOTOR_INPUT_PIN_2 = 24
 
     def unreel(self, speed):
         """Unreels the winch.
@@ -23,8 +23,8 @@ class Winch():
         """
         self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, speed)
 
-        self.gpio.write(MOTOR_INPUT_PIN_1, 1)
-        self.gpio.write(MOTOR_INPUT_PIN_2, 0)
+        self.gpio.write(self.MOTOR_INPUT_PIN_1, 1)
+        self.gpio.write(self.MOTOR_INPUT_PIN_2, 0)
 
     def reel_in(self, speed):
         """Reels in the winch.
@@ -34,30 +34,40 @@ class Winch():
         """
         self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, speed)
 
-        self.gpio.write(MOTOR_INPUT_PIN_1, 0)
-        self.gpio.write(MOTOR_INPUT_PIN_2, 1)
+        self.gpio.write(self.MOTOR_INPUT_PIN_1, 0)
+        self.gpio.write(self.MOTOR_INPUT_PIN_2, 1)
 
     def stop(self):
         """Stops moving the winch."""
         self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, self.PWM_OFF)
 
-        self.gpio.write(MOTOR_INPUT_PIN_1, 0)
-        self.gpio.write(MOTOR_INPUT_PIN_2, 0)
+        self.gpio.write(self.MOTOR_INPUT_PIN_1, 0)
+        self.gpio.write(self.MOTOR_INPUT_PIN_2, 0)
 
     def __init__(self):
         self.gpio = pigpio.pi()
+
+        # put the digital pins into output mode
+        self.gpio.set_mode(self.MOTOR_INPUT_PIN_1, pigpio.OUTPUT)
+        self.gpio.set_mode(self.MOTOR_INPUT_PIN_2, pigpio.OUTPUT)
 
 class Thruster():
     """Class to send serial messages to the BabyROV to control the Thruster."""
     THRUSTER_SPEED_OFF = 0
 
     def __init__(self):
-        self.serial_conn = serial.Serial('COM13', 9600) # change this COM port with whatever comes up when plugged in
+        self.serial_conn = serial.Serial('/dev/ttyUSB0', 9600) # TODO: verify this port is correct
 
     def forward(self, speed):
+        """Starts the thruster on BabyROV.
+
+        :param byte speed: a value in the range [0-255] that specifies the speed of the thruster
+
+        """
         self.serial_conn.write(bytes(speed))
 
     def stop(self):
+        """Stops the thruster on the BabyROV."""
         self.serial_conn.write(bytes(self.THRUSTER_SPEED_OFF))
 
 
@@ -120,6 +130,7 @@ if __name__ == "__main__":
 
     rov = BabyROV()
 
+    # check the commands passed in via command line for what function to call
     if args.forward:
         rov.forward(args.forward[ARGS_WINCH_SPEED_IDX], args.forward[ARGS_THRUSTER_SPEED_IDX])
     elif args.backward:

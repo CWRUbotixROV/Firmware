@@ -17,6 +17,28 @@
     - The values should all be in the range [0,255]
 8. Pressing `w` and `s` will move the BabyROV/Winch forward and backward (respectively)
 
+## General Usage of `babyrov_control.py`
+
+This script accepts command line arguments (the GUI should handle all of this already, but if you find yourself needing to run the script manually, these are the commands.  Make sure to only use one at a time).
+
+Usage:
+```shell
+python babyrov_control.py --<command> [arg1] [arg2]
+```
+
+|Command|Argument 1||Description|
+|:--:|:--:|
+|forward|
+|backward|
+|stop|
+|help|
+optional arguments:
+  -h, --help            show this help message and exit
+  --forward FORWARD FORWARD
+                        Moves the BabyROV forward and unreels the winch
+  --backward BACKWARD   Stops moving the BabyROV and reels in the winch
+  --stop                Stops moving the BabyROV and stops the winch
+
 ## Troubleshooting
 
 ### Winch turns in the wrong direction
@@ -34,8 +56,8 @@ def unreel(self, speed):
     """
     self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, speed)
 
-    self.gpio.write(MOTOR_INPUT_PIN_1, 1) # <---- make this 0
-    self.gpio.write(MOTOR_INPUT_PIN_2, 0) # <---- make this 1
+    self.gpio.write(MOTOR_INPUT_PIN_1, 1) # <---- make this 0 if it goes in the wrong direction
+    self.gpio.write(MOTOR_INPUT_PIN_2, 0) # <---- make this 1 if it goes in the wrong direction
 
 def reel_in(self, speed):
     """Reels in the winch.
@@ -45,7 +67,21 @@ def reel_in(self, speed):
     """
     self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, speed)
 
-    self.gpio.write(MOTOR_INPUT_PIN_1, 0) # <---- make this 1
-    self.gpio.write(MOTOR_INPUT_PIN_2, 1) # <---- make this 0
+    self.gpio.write(MOTOR_INPUT_PIN_1, 0) # <---- make this 1 if it goes in the wrong direction
+    self.gpio.write(MOTOR_INPUT_PIN_2, 1) # <---- make this 0 if it goes in the wrong direction
 ```
 
+### Serial Connection
+
+I am not 100% sure the connection to the Arduino Nano is going to work. I think that the serial port should be `/dev/ttyUSB0` or something like that.
+
+The following code in the `ssh_comms/babyrov_control.py` file is what needs to be changed (the `'/dev/ttyUSB0'` is what should be changed - make sure to leave the quotes).
+
+```python
+class Thruster():
+    """Class to send serial messages to the BabyROV to control the Thruster."""
+    THRUSTER_SPEED_OFF = 0
+
+    def __init__(self):
+        self.serial_conn = serial.Serial('/dev/ttyUSB0', 9600) # TODO: verify this port is correct
+```
