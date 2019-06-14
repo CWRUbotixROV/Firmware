@@ -273,34 +273,40 @@ class ControlWindow():
     def _setup_thrusters(self):
         """Adds the thruster info boxes to the GUI."""
 
+        # setup the thruster speed input description under the instructions
         self.thruster_speed_desc = Text(self.master, height=self.THRUSTER_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
         self.thruster_speed_desc.grid(row=self.THRUSTER_SPEED_ROW, column=self.SPEED_DESC_COL)
         self.thruster_speed_desc.insert(END, 'Thruster Speed:')
         self.thruster_speed_desc.config(state='disabled')
 
+        # setup the winch forward speed input description under the thruster speed
         self.winch_forward_speed_desc = Text(self.master, height=self.WINCH_FORWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
         self.winch_forward_speed_desc.grid(row=self.WINCH_FORWARD_SPEED_ROW, column=self.SPEED_DESC_COL)
         self.winch_forward_speed_desc.insert(END, 'Winch Forward Speed:')
         self.winch_forward_speed_desc.config(state='disabled')
 
+        # setup the winch backward speed input description under the winch forward
         self.winch_backward_speed_desc = Text(self.master, height=self.WINCH_BACKWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
         self.winch_backward_speed_desc.grid(row=self.WINCH_BACKWARD_SPEED_ROW, column=self.SPEED_DESC_COL)
         self.winch_backward_speed_desc.insert(END, 'Winch Backward Speed:')
         self.winch_backward_speed_desc.config(state='disabled')
 
+        # setup the thruster speed input box
         self.thruster_speed = Text(self.master, height=self.THRUSTER_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
         self.thruster_speed.grid(row=self.THRUSTER_SPEED_ROW, column=self.SPEED_COL)
         self.thruster_speed.insert(END, '0')
 
+        # setup the winch forward speed input box
         self.winch_forward_speed = Text(self.master, height=self.WINCH_FORWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
         self.winch_forward_speed.grid(row=self.WINCH_FORWARD_SPEED_ROW, column=self.SPEED_COL)
         self.winch_forward_speed.insert(END, '0')
 
+        # setup the winch backward speed input box
         self.winch_backward_speed = Text(self.master, height=self.WINCH_BACKWARD_SPEED_HEIGHT, width=self.HALF_WINDOW_WIDTH)
         self.winch_backward_speed.grid(row=self.WINCH_BACKWARD_SPEED_ROW, column=self.SPEED_COL)
         self.winch_backward_speed.insert(END, '0')
 
-        # create text box for left thruster on left under the instructions
+        # create text box for left thruster on left under the speed input boxes
         self.thruster_state = SettableText(self.master,
                                            height=self.THRUSTER_STATUS_HEIGHT,
                                            width=self.WINDOW_WIDTH)
