@@ -57,7 +57,7 @@ class Thruster():
     THRUSTER_SPEED_OFF = 0
 
     def __init__(self):
-        self.serial_conn = serial.Serial('/dev/ttyUSB0/', 9600)
+        self.serial_conn = serial.Serial('/dev/ttyUSB0', 9600)
 
     def forward(self, speed):
         """Starts the thruster on BabyROV.
