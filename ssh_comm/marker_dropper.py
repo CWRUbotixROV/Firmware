@@ -39,7 +39,7 @@ class MarkerDropper():
         self.red_markers.sort()
         self.black_markers.sort()
         self.pin = pin
-        print(self.red_markers, self.black_markers)
+        # print(self.red_markers, self.black_markers)
 
         self.tmp_angle = self.angle     # used so we only update the angle and marker arrays once the command succeeds
         self.last_dropped = 'red'

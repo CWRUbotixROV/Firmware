@@ -22,10 +22,10 @@ class Winch():
         :param int speed: a PWM value in the range [0-255] that defines the speed to unreel
 
         """
-        self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, speed)
+        self.gpio.hardware_PWM(self.ENABLE_PIN, 16000, int((speed/255)*1000000))
 
-        self.gpio.write(self.MOTOR_INPUT_PIN_1, 1)
-        self.gpio.write(self.MOTOR_INPUT_PIN_2, 0)
+        self.gpio.write(self.MOTOR_INPUT_PIN_1, 0)
+        self.gpio.write(self.MOTOR_INPUT_PIN_2, 1)
 
     def reel_in(self, speed):
         """Reels in the winch.
@@ -35,8 +35,8 @@ class Winch():
         """
         self.gpio.set_PWM_dutycycle(self.ENABLE_PIN, speed)
 
-        self.gpio.write(self.MOTOR_INPUT_PIN_1, 0)
-        self.gpio.write(self.MOTOR_INPUT_PIN_2, 1)
+        self.gpio.write(self.MOTOR_INPUT_PIN_1, 1)
+        self.gpio.write(self.MOTOR_INPUT_PIN_2, 0)
 
     def stop(self):
         """Stops moving the winch."""
@@ -57,7 +57,7 @@ class Thruster():
     THRUSTER_SPEED_OFF = 0
 
     def __init__(self):
-        self.serial_conn = serial.Serial('/dev/ttyUSB0', 9600) # TODO: verify this port is correct
+        self.serial_conn = None
 
     def forward(self, speed):
         """Starts the thruster on BabyROV.
@@ -65,7 +65,7 @@ class Thruster():
         :param byte speed: a value in the range [0-255] that specifies the speed of the thruster
 
         """
-        self.serial_conn.write(bytes(speed))
+        self.serial_conn.write(bytes(1))
 
     def stop(self):
         """Stops the thruster on the BabyROV."""
@@ -77,12 +77,18 @@ class BabyROV():
 
     def __init__(self):
         self.winch = Winch()
-        self.thruster = Thruster()
+        # self.thruster = Thruster()
 
     def stop(self):
         """Stops the winch and stops the thruster"""
-        winch.stop()
-        thruster.stop()
+        self.winch.stop()
+        # self.thruster.stop()
+    
+    # def timed_unreel(self):
+        # self.winch.unreel(192)
+        # conn = serial.Serial('/dev/ttyUSB0', 9600)
+        # conn.write(bytes(1))
+        # self.winch.stop()
 
     def forward(self, winch_speed, thruster_speed):
         """Moves the BabyROV forward and unreels the winch.
@@ -92,9 +98,9 @@ class BabyROV():
         :param int thruster_speed: a PWM value int he range [0-255] that defines
                                    the speed for the thruster
         """
-        winch.unreel(winch_speed)
+        self.winch.unreel(winch_speed)
 
-        thruster.forward(thruster_speed)
+        # self.thruster.forward(thruster_speed)
 
     def backward(self, winch_speed):
         """Stops moving the BabyROV and reels in the winch.
@@ -103,9 +109,9 @@ class BabyROV():
                                    the speed to reel in
         """
         # stop the BabyROV from moving while it gets reeled in
-        thruster.stop()
+        # self.thruster.stop()
 
-        winch.reel_in(winch_speed)
+        self.winch.reel_in(winch_speed)
 
 
 def parse_cmd_args():
@@ -123,7 +129,9 @@ def parse_cmd_args():
     parser.add_argument('--stop',
                         action='store_true',
                         help='Stops moving the BabyROV and stops the winch')
-
+    parser.add_argument('--timed',
+                        action='store_true',
+                        help='Starts 30 seconds of the baby ROV going forward')
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -136,5 +144,7 @@ if __name__ == "__main__":
         rov.forward(args.forward[ARGS_WINCH_SPEED_IDX], args.forward[ARGS_THRUSTER_SPEED_IDX])
     elif args.backward:
         rov.backward(args.backward[ARGS_WINCH_SPEED_IDX])
+    elif args.timed:
+        rov.timed_unreel()
     else:
         rov.stop()

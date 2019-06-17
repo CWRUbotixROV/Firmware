@@ -62,6 +62,13 @@ class ThrusterControl():
         self.thruster_forward_off()
         self.thruster_backward_off()
 
+    def baby_forward(self):
+        """
+        Starts the baby ROV going forward on a time delay.
+        """
+        if self.ssh is not None:
+            self.ssh.exec_command('python babyrov_control.py --timed')
+
     def thruster_forward(self, event=None):
         """Sends the command to move forward and updates the GUI.
 
@@ -72,8 +79,10 @@ class ThrusterControl():
         """
         if not self.forward and not self.backward:
             self.text_output.set_text(self.FORWARD.format(DESC=self.DESC))
-            speed = self.speed_text.get('1.0', END)
-            winch_speed = self.winch_forward_speed_text.get('1.0', END)
+            # speed = self.speed_text.get('1.0', END)
+            speed = 255
+            # winch_speed = self.winch_forward_speed_text.get('1.0', END)
+            winch_speed = 255
             if self.ssh is not None:
                 self.ssh.exec_and_print('python babyrov_control.py --forward {} {}'.format(winch_speed, speed))
             self.forward = True
@@ -89,7 +98,8 @@ class ThrusterControl():
         if not self.forward and not self.backward:
             self.text_output.set_text(self.BACKWARD.format(DESC=self.DESC))
             speed = self.speed_text.get('1.0', END)
-            winch_speed = self.winch_backward_speed_text.get('1.0', END)
+            # winch_speed = self.winch_backward_speed_text.get('1.0', END)
+            winch_speed = 255
             if self.ssh is not None:
                 self.ssh.exec_and_print('python babyrov_control.py --backward {}'.format(winch_speed))
             self.backward = True
@@ -107,7 +117,7 @@ class ThrusterControl():
         if not self.backward:
             self.text_output.set_text(self.OFF.format(DESC=self.DESC))
             if self.ssh is not None:
-                self.ssh.exec_and_print('python babyrov_control.py --stop')
+                self.ssh.exec_and_print('python babyrov_control.py --forward 0 0')
         else:
             self.thruster_backward()
 
@@ -123,7 +133,7 @@ class ThrusterControl():
         if not self.forward:
             self.text_output.set_text(self.OFF.format(DESC=self.DESC))
             if self.ssh is not None:
-                self.ssh.exec_and_print('python babyrov_control.py --stop')
+                self.ssh.exec_and_print('python babyrov_control.py --backward 0')
         else:
             self.thruster_forward()
 
@@ -188,16 +198,16 @@ class ControlWindow():
 
     def __init__(self, use_zero=False, red=[-3, -2, -1], black=[1, 2, 3]):
         # attempt to connect to the Companion computer.
-        '''try:
+        try:
             self.ssh = SSH(SSH.COMPANION)
 
             self.markerdropper = MarkerDropper(270, 40, red_markers=red, black_markers=black, pin=18)
             self.ssh.exec_and_print(self.markerdropper.go_to_start())
         # if no connection can be made, make a note of that on the GUI
-        except:'''
-        self.TEMP_TEXT = self.NO_CONNECTION
-        self.PH_TEXT = self.NO_CONNECTION
-        self.ssh = None
+        except:
+            self.TEMP_TEXT = self.NO_CONNECTION
+            self.PH_TEXT = self.NO_CONNECTION
+            self.ssh = None
 
         # attempt to connect to the arduino serial port
         ''' uncomment this and tab over the below code into the except once the relays are set up
@@ -364,9 +374,7 @@ class ControlWindow():
         """Bind the keys for the peripherals (ie thrusters, sensors, etc)."""
         # bind the right thruster key to turn it on and off
         self.master.bind('<KeyPress-{}>'.format(self.THRUSTER_FORWARD_KEY),
-                         self.thruster.thruster_forward)
-        self.master.bind('<KeyRelease-{}>'.format(self.THRUSTER_FORWARD_KEY),
-                         self.thruster.thruster_forward_off)
+                         self.thruster.baby_forward)
 
         # bind the left thruster key to turn it on and off
         self.master.bind('<KeyPress-{}>'.format(self.THRUSTER_BACKWARD_KEY),
@@ -436,7 +444,7 @@ class ControlWindow():
             cmd, has_markers = self.markerdropper.drop_red_marker()
         else:
             cmd, has_markers = self.markerdropper.drop_black_marker()
-        print(cmd)
+        # print(cmd)
         if has_markers:
             self.ssh.exec_and_print(cmd)
             self.markerdropper.success()
