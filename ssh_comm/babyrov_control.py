@@ -57,15 +57,15 @@ class Thruster():
     THRUSTER_SPEED_OFF = 0
 
     def __init__(self):
-        self.serial_conn = None
+        self.serial_conn = serial.Serial('/dev/ttyUSB0/', 9600)
 
     def forward(self, speed):
         """Starts the thruster on BabyROV.
 
-        :param byte speed: a value in the range [0-255] that specifies the speed of the thruster
+        :param byte speed: a value in the range [0-100] that specifies the speed of the thruster
 
         """
-        self.serial_conn.write(bytes(1))
+        self.serial_conn.write(bytes(speed))
 
     def stop(self):
         """Stops the thruster on the BabyROV."""
@@ -77,12 +77,12 @@ class BabyROV():
 
     def __init__(self):
         self.winch = Winch()
-        # self.thruster = Thruster()
+        self.thruster = Thruster()
 
     def stop(self):
         """Stops the winch and stops the thruster"""
         self.winch.stop()
-        # self.thruster.stop()
+        self.thruster.stop()
     
     # def timed_unreel(self):
         # self.winch.unreel(192)
@@ -95,12 +95,12 @@ class BabyROV():
 
         :param int winch_speed:    a PWM value in the range [0-255] that defines
                                    the speed to unreel
-        :param int thruster_speed: a PWM value int he range [0-255] that defines
+        :param int thruster_speed: a PWM value in the range [0-100] that defines
                                    the speed for the thruster
         """
         self.winch.unreel(winch_speed)
 
-        # self.thruster.forward(thruster_speed)
+        self.thruster.forward(thruster_speed)
 
     def backward(self, winch_speed):
         """Stops moving the BabyROV and reels in the winch.
@@ -109,7 +109,7 @@ class BabyROV():
                                    the speed to reel in
         """
         # stop the BabyROV from moving while it gets reeled in
-        # self.thruster.stop()
+        self.thruster.stop()
 
         self.winch.reel_in(winch_speed)
 
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         rov.forward(args.forward[ARGS_WINCH_SPEED_IDX], args.forward[ARGS_THRUSTER_SPEED_IDX])
     elif args.backward:
         rov.backward(args.backward[ARGS_WINCH_SPEED_IDX])
-    elif args.timed:
-        rov.timed_unreel()
+    # elif args.timed:
+    #     rov.timed_unreel()
     else:
         rov.stop()
