@@ -196,12 +196,12 @@ class ControlWindow():
     JUMBO_HOOK_COL   = 1
 
 
-    def __init__(self, use_zero=False, red=[-3, -2, -1], black=[1, 2, 3]):
+    def __init__(self, use_zero=False, red=[-2, -1], black=[1, 2]):
         # attempt to connect to the Companion computer.
         try:
             self.ssh = SSH(SSH.COMPANION)
 
-            self.markerdropper = MarkerDropper(270, 40, red_markers=red, black_markers=black, pin=18)
+            self.markerdropper = MarkerDropper(200, spacing=40, red_markers=red, black_markers=black, pin=18)
             self.ssh.exec_and_print(self.markerdropper.go_to_start())
         # if no connection can be made, make a note of that on the GUI
         except:
@@ -239,14 +239,14 @@ class ControlWindow():
         """
         Jiggle the marker dropper back and forth to release the marker.
         """
-        left_cmd = cmd_set_servo_angle(self.markerdropper.angle-5)
-        right_cmd = cmd_set_servo_angle(self.markerdropper.angle+5)
-        home_cmd = cmd_set_servo_angle(self.markerdropper.angle)
-        for i in range(3):
+        left_cmd = cmd_set_servo_angle(self.markerdropper.angle-10, ang_range=self.markerdropper.ang_range)
+        right_cmd = cmd_set_servo_angle(self.markerdropper.angle+10, ang_range=self.markerdropper.ang_range)
+        home_cmd = cmd_set_servo_angle(self.markerdropper.angle, self.markerdropper.ang_range)
+        for i in range(2):
             self.ssh.exec_and_print(left_cmd)
-            time.sleep(0.2)
+            time.sleep(0.5)
             self.ssh.exec_and_print(right_cmd)
-            time.sleep(0.2)
+            time.sleep(0.5)
         self.ssh.exec_and_print(home_cmd)
 
     def _add_instructions(self):
@@ -374,7 +374,9 @@ class ControlWindow():
         """Bind the keys for the peripherals (ie thrusters, sensors, etc)."""
         # bind the right thruster key to turn it on and off
         self.master.bind('<KeyPress-{}>'.format(self.THRUSTER_FORWARD_KEY),
-                         self.thruster.baby_forward)
+                         self.thruster.thruster_forward)
+        self.master.bind('<KeyPress-{}>'.format(self.THRUSTER_BACKWARD_KEY),
+                        self.thruster.thruster_backward_off)
 
         # bind the left thruster key to turn it on and off
         self.master.bind('<KeyPress-{}>'.format(self.THRUSTER_BACKWARD_KEY),
@@ -446,9 +448,15 @@ class ControlWindow():
             cmd, has_markers = self.markerdropper.drop_black_marker()
         # print(cmd)
         if has_markers:
+            print(cmd)
             self.ssh.exec_and_print(cmd)
             self.markerdropper.success()
             self.jiggle_dropper()
+            home = self.markerdropper.go_to_start()
+            print(home)
+            time.sleep(1)
+            self.ssh.exec_and_print(home)
+            self.markerdropper.success()
 
     def toggle_smart_hook(self, event=None):
         """Sends the serial command to toggle the smart hook and update its status box.

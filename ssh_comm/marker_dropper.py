@@ -12,7 +12,7 @@ def cmd_set_servo_angle(angle, ang_range=270, pin=18):
     MIN_TIME = 500
     MAX_TIME = 2500
     time_range = MAX_TIME - MIN_TIME
-    usec = int(500 + (angle/ang_range)*time_range)  # calculte pulse duration in microseconds for angle
+    usec = int(MIN_TIME + (angle/ang_range)*time_range)  # calculte pulse duration in microseconds for angle
     return f"pigs s {pin} {usec}"
 
 
@@ -32,14 +32,13 @@ class MarkerDropper():
         """
         self.ang_range = ang_range
         self.spacing = spacing
-        self.offset = ang_range/2 + 8
+        self.offset = ang_range/2
         self.angle = self.offset
         self.red_markers = red_markers
         self.black_markers = black_markers
         self.red_markers.sort()
         self.black_markers.sort()
         self.pin = pin
-        # print(self.red_markers, self.black_markers)
 
         self.tmp_angle = self.angle     # used so we only update the angle and marker arrays once the command succeeds
         self.last_dropped = 'red'
@@ -49,7 +48,8 @@ class MarkerDropper():
         Returns a command to rotate the mechanism to the starting position. Should be called once, before any markers
         are dropped. Alternatively, the mechanism can be positioned by hand, and this call can be omitted.
         """
-        return cmd_set_servo_angle(self.angle, ang_range=self.ang_range, pin=self.pin)
+        self.last_dropped = 'home'
+        return cmd_set_servo_angle(self.offset, ang_range=self.ang_range, pin=self.pin)
 
     def drop_red_marker(self):
         """
@@ -63,6 +63,7 @@ class MarkerDropper():
             """If there are still red markers left, we return the pigs command to drop the next one and store
             what we just did. It will only update if the pigs command is successful."""
             self.tmp_angle = (self.red_markers[-1])*self.spacing + self.offset  # go from the end
+            print(self.tmp_angle)
             self.last_dropped = 'red'
             return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin), True
         print("No more red markers!")
@@ -79,6 +80,7 @@ class MarkerDropper():
         if len(self.black_markers) > 0:
             # Works exactly like drop_red_marker
             self.tmp_angle = (self.black_markers[0])*self.spacing + self.offset
+            print(self.tmp_angle)
             self.last_dropped = 'black'
             return cmd_set_servo_angle(self.tmp_angle, ang_range=self.ang_range, pin=self.pin), True
         print("No more black markers!")
@@ -90,8 +92,8 @@ class MarkerDropper():
         was successful.
         """
         self.angle = self.tmp_angle
-        if self.last_dropped=='red':
+        if self.last_dropped == 'red':
             self.red_markers = self.red_markers[:-1]
-        else:
+        if self.last_dropped == 'black':
             self.black_markers = self.black_markers[1:]
-    
+
