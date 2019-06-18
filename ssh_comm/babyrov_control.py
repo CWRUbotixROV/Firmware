@@ -57,7 +57,12 @@ class Thruster():
     THRUSTER_SPEED_OFF = 0
 
     def __init__(self):
-        self.serial_conn = serial.Serial('/dev/ttyUSB0', 9600)
+        # self.serial_conn = serial.Serial('/dev/ttyUSB0', 9600)
+        self.serial_conn = serial.Serial()
+        self.serial_conn.baudrate = 9600
+        self.serial_conn.port = '/dev/ttyUSB0'
+        self.serial_conn.dtr = False
+        self.serial_conn.open()
 
     def forward(self, speed):
         """Starts the thruster on BabyROV.
@@ -83,7 +88,7 @@ class BabyROV():
         """Stops the winch and stops the thruster"""
         self.winch.stop()
         self.thruster.stop()
-    
+
     # def timed_unreel(self):
         # self.winch.unreel(192)
         # conn = serial.Serial('/dev/ttyUSB0', 9600)
