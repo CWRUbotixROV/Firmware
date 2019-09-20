@@ -3,11 +3,7 @@ import glob
 import time
 
 '''
-Setup info:
-
-Red connects to 3.3V, Blue connects to ground and Yellow is data (pin 7 which is GPIO04)
-4.7 kOhm resistor between data and VCC
-
+Performs a temperature reading and prints the result. See Surface_Computer.md for more info
 '''
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
